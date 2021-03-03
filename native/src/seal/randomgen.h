@@ -32,7 +32,11 @@ namespace seal
 
         blake2xb = 1,
 
-        shake256 = 2
+        shake256 = 2,
+
+        aesni = 3,
+
+        vaes = 4
     };
 
     /**
@@ -130,6 +134,12 @@ namespace seal
                 /* fall through */
 
             case prng_type::shake256:
+                /* fall through */
+
+            case prng_type::aesni:
+                /* fall through */
+
+            case prng_type::vaes:
                 /* fall through */
 
             case prng_type::unknown:
@@ -620,6 +630,146 @@ namespace seal
         SEAL_NODISCARD auto create_impl(prng_seed_type seed) -> std::shared_ptr<UniformRandomGenerator> override
         {
             return std::make_shared<Shake256PRNG>(seed);
+        }
+
+    private:
+    };
+
+    /**
+    Provides an implementation of UniformRandomGenerator for using Blake2xb for
+    generating randomness with given 128-bit seed.
+    */
+    class AESNIPRNG : public UniformRandomGenerator
+    {
+    public:
+        /**
+        Creates a new Blake2xbPRNG instance initialized with the given seed.
+
+        @param[in] seed The seed for the random number generator
+        */
+        AESNIPRNG(prng_seed_type seed);
+
+        /**
+        Destroys the random number generator.
+        */
+        ~AESNIPRNG() = default;
+
+    protected:
+        SEAL_NODISCARD prng_type type() const noexcept override
+        {
+            return prng_type::aesni;
+        }
+
+        void refill_buffer() override;
+
+    private:
+        std::uint64_t counter_ = 0;
+        std::array<std::uint64_t, 2 * 11> expanded_key;
+    };
+
+    class AESNIPRNGFactory : public UniformRandomGeneratorFactory
+    {
+    public:
+        /**
+        Creates a new Blake2xbPRNGFactory. The seed will be sampled randomly
+        for each Blake2xbPRNG instance created by the factory instance, which is
+        desirable in most normal use-cases.
+        */
+        AESNIPRNGFactory() : UniformRandomGeneratorFactory()
+        {}
+
+        /**
+        Creates a new Blake2xbPRNGFactory and sets the default seed to the given
+        value. For debugging purposes it may sometimes be convenient to have the
+        same randomness be used deterministically and repeatedly. Such randomness
+        sampling is naturally insecure and must be strictly restricted to debugging
+        situations. Thus, most users should never use this constructor.
+
+        @param[in] default_seed The default value for a seed to be used by all
+        created instances of Blake2xbPRNG
+        */
+        AESNIPRNGFactory(prng_seed_type default_seed) : UniformRandomGeneratorFactory(default_seed)
+        {}
+
+        /**
+        Destroys the random number generator factory.
+        */
+        ~AESNIPRNGFactory() = default;
+
+    protected:
+        SEAL_NODISCARD auto create_impl(prng_seed_type seed) -> std::shared_ptr<UniformRandomGenerator> override
+        {
+            return std::make_shared<AESNIPRNG>(seed);
+        }
+
+    private:
+    };
+
+    /**
+    Provides an implementation of UniformRandomGenerator for using Blake2xb for
+    generating randomness with given 128-bit seed.
+    */
+    class VAESPRNG : public UniformRandomGenerator
+    {
+    public:
+        /**
+        Creates a new Blake2xbPRNG instance initialized with the given seed.
+
+        @param[in] seed The seed for the random number generator
+        */
+        VAESPRNG(prng_seed_type seed);
+
+        /**
+        Destroys the random number generator.
+        */
+        ~VAESPRNG() = default;
+
+    protected:
+        SEAL_NODISCARD prng_type type() const noexcept override
+        {
+            return prng_type::vaes;
+        }
+
+        void refill_buffer() override;
+
+    private:
+        std::uint64_t counter_ = 0;
+        std::array<std::uint64_t, 2 * 11> expanded_key;
+    };
+
+    class VAESPRNGFactory : public UniformRandomGeneratorFactory
+    {
+    public:
+        /**
+        Creates a new Blake2xbPRNGFactory. The seed will be sampled randomly
+        for each Blake2xbPRNG instance created by the factory instance, which is
+        desirable in most normal use-cases.
+        */
+        VAESPRNGFactory() : UniformRandomGeneratorFactory()
+        {}
+
+        /**
+        Creates a new Blake2xbPRNGFactory and sets the default seed to the given
+        value. For debugging purposes it may sometimes be convenient to have the
+        same randomness be used deterministically and repeatedly. Such randomness
+        sampling is naturally insecure and must be strictly restricted to debugging
+        situations. Thus, most users should never use this constructor.
+
+        @param[in] default_seed The default value for a seed to be used by all
+        created instances of Blake2xbPRNG
+        */
+        VAESPRNGFactory(prng_seed_type default_seed) : UniformRandomGeneratorFactory(default_seed)
+        {}
+
+        /**
+        Destroys the random number generator factory.
+        */
+        ~VAESPRNGFactory() = default;
+
+    protected:
+        SEAL_NODISCARD auto create_impl(prng_seed_type seed) -> std::shared_ptr<UniformRandomGenerator> override
+        {
+            return std::make_shared<VAESPRNG>(seed);
         }
 
     private:
